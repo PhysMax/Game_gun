@@ -20,6 +20,8 @@ class ball():
         x - начальное положение мяча по горизонтали
         y - начальное положение мяча по вертикали
         """
+        self.live = 1
+        self.time = 0
         self.x = x
         self.y = y
         self.r = 10
@@ -34,6 +36,14 @@ class ball():
             fill=self.color
         )
         self.live = 30
+
+    def time_live(self):
+        global balls
+        if self.vx == 0 and self.vy == 0 and self.time >= 1000:
+            canv.delete(self.id)
+            balls.remove(self)
+        else:
+            self.time += 30
 
     def set_coords(self):
         canv.coords(
@@ -51,7 +61,7 @@ class ball():
         self.x и self.y с учетом скоростей self.vx и self.vy, силы гравитации, действующей на мяч,
         и стен по краям окна (размер окна 800х600).
         """
-        self.vy -= 1
+        self.vy -= 2
         if self.x + self.vx >= 780:
             self.x = 780
         if self.x + self.vx <= 20:
@@ -136,38 +146,68 @@ class gun():
 
 class target():
     def __init__(self):
-        self.points = 0
         self.live = 1
         self.id = canv.create_oval(0, 0, 0, 0)
-        self.id_points = canv.create_text(30, 30, text=self.points, font='28')
         self.new_target()
 
     def new_target(self):
         """ Инициализация новой цели. """
-        x = self.x = rnd(600, 780)
+        x = self.x = rnd(600, 750)
         y = self.y = rnd(300, 550)
-        r = self.r = rnd(2, 50)
+        r = self.r = rnd(10, 50)
+        self.vx = rnd(5, 15) * choice([-1, 1])
+        self.vy = rnd(5, 15) * choice([-1, 1])
         color = self.color = 'red'
         canv.coords(self.id, x - r, y - r, x + r, y + r)
         canv.itemconfig(self.id, fill=color)
 
-    def hit(self, points=1):
+    def move(self):
+        if self.live == 1:
+            if (self.x + self.r >= 800) or (self.x - self.r <= 400):
+                self.vx = - self.vx
+            if (self.y + self.r >= 600) or (self.y - self.r <= 0):
+                self.vy = - self.vy
+            self.x += self.vx
+            self.y -= self.vy
+            self.set_coords()
+
+    def set_coords(self):
+        canv.coords(
+            self.id,
+            self.x - self.r,
+            self.y - self.r,
+            self.x + self.r,
+            self.y + self.r
+        )
+
+    def hit(self):
         """Попадание шарика в цель."""
         canv.coords(self.id, -10, -10, -10, -10)
+
+
+class points():
+    def __init__(self):
+        self.points = 0
+        self.id_points = canv.create_text(30, 30, text=self.points, font='28')
+
+    """Подсчет очков в левом верхнем углу"""
+    def hit(self, points=1):
         self.points += points
         canv.itemconfig(self.id_points, text=self.points)
 
 
 t1 = target()
+t2 = target()
 screen1 = canv.create_text(400, 300, text='', font='28')
 g1 = gun()
 bullet = 0
 balls = []
-
+points = points()
 
 def new_game(event=''):
-    global gun, t1, screen1, balls, bullet
+    global gun, t1, t2, screen1, balls, bullet, points
     t1.new_target()
+    t2.new_target()
     bullet = 0
     balls = []
     canv.bind('<Button-1>', g1.fire2_start)
@@ -176,15 +216,25 @@ def new_game(event=''):
 
     z = 0.03
     t1.live = 1
-    while t1.live or balls:
+    t2.live = 1
+    while t1.live or t2.live or balls:
+        t1.move()
+        t2.move()
         for b in balls:
             b.move()
-            if b.hittest(t1) and t1.live:
+            if t1.live and b.hittest(t1):
                 t1.live = 0
                 t1.hit()
+                points.hit()
+            if t2.live and b.hittest(t2):
+                t2.live = 0
+                t2.hit()
+                points.hit()
+            if t1.live == 0 and t2.live == 0:
+                canv.itemconfig(screen1, text='Вы уничтожили цели за ' + str(bullet) + ' выстрелов')
                 canv.bind('<Button-1>', '')
                 canv.bind('<ButtonRelease-1>', '')
-                canv.itemconfig(screen1, text='Вы уничтожили цель за ' + str(bullet) + ' выстрелов')
+            b.time_live()
         canv.update()
         time.sleep(0.03)
         g1.targetting()
@@ -196,4 +246,4 @@ def new_game(event=''):
 
 new_game()
 
-mainloop()
+tk.mainloop()
