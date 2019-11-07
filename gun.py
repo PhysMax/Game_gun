@@ -231,6 +231,8 @@ def new_game(event=''):
                 t2.hit()
                 points.hit()
             if t1.live == 0 and t2.live == 0:
+                g1.f2_on = 0
+                g1.f2_power = 10
                 canv.itemconfig(screen1, text='Вы уничтожили цели за ' + str(bullet) + ' выстрелов')
                 canv.bind('<Button-1>', '')
                 canv.bind('<ButtonRelease-1>', '')
