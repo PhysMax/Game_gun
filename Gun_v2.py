@@ -65,24 +65,25 @@ class ball():
         self.x и self.y с учетом скоростей self.vx и self.vy, силы гравитации, действующей на мяч,
         и стен по краям окна (размер окна 800х600).
         """
-        self.vy -= 2
+        self.vy += 2
         if self.x + self.vx >= 780:
-            self.x = 780
-        if self.x + self.vx <= 20:
-            self.x = 20
-        if (self.x >= 780) or (self.x <= 20):
+            self.x = 1560 - self.x - self.vx
             self.vx = - self.vx
-        if self.y - self.vy >= 550:
-            self.y = 550
-        if self.y >= 550:
+        elif self.x + self.vx <= 20:
+            self.x = 40 - self.x - self.vx
+            self.vx = - self.vx
+        else:
+            self.x += self.vx
+        if self.y + self.vy >= 550:
+            self.y = 550 - (2 / 3) * (self.y + self.vy - 550)
             self.vy = - self.vy / 1.5
             self.vx = self.vx / 1.5
+        else:
+            self.y += self.vy
         if self.vx ** 2 + self.vy ** 2 < 2:
             self.vy = 0
             self.vx = 0
             self.y = 550
-        self.x += self.vx
-        self.y -= self.vy
         self.set_coords()
 
     def hittest(self, obj):
@@ -121,7 +122,7 @@ class gun():
         new_ball.r += 5
         self.an = math.atan((event.y - new_ball.y) / (event.x - new_ball.x))
         new_ball.vx = self.f2_power * math.cos(self.an)
-        new_ball.vy = - self.f2_power * math.sin(self.an)
+        new_ball.vy = - self.f2_power * math.sin(self.an) * (-1)
         balls += [new_ball]
         self.f2_on = 0
         self.f2_power = 10
@@ -130,10 +131,6 @@ class gun():
         """Прицеливание. Зависит от положения мыши."""
         if event:
             self.an = math.atan((event.y - 450) / (event.x - 20))
-        if self.f2_on:
-            canv.itemconfig(self.id, fill='orange')
-        else:
-            canv.itemconfig(self.id, fill='black')
         canv.coords(self.id, 20, 450,
                     20 + max(self.f2_power, 20) * math.cos(self.an),
                     450 + max(self.f2_power, 20) * math.sin(self.an)
@@ -144,6 +141,36 @@ class gun():
             if self.f2_power < 100:
                 self.f2_power += 1
             canv.itemconfig(self.id, fill='orange')
+        else:
+            canv.itemconfig(self.id, fill='black')
+
+
+class mega_gun(gun):
+    def __init__(self):
+        self.f2_power = 10
+        self.f2_on = 0
+        self.an = 1
+        self.id = canv.create_line(20, 450, 50, 420, width=11)
+        self.id_line = canv.create_line(20, 450, 50, 420, width=1)
+
+    def targetting(self, event=0):
+        """Прицеливание. Зависит от положения мыши."""
+        if event:
+            self.an = math.atan((event.y - 450) / (event.x - 20))
+        canv.coords(self.id, 20, 450,
+                    20 + max(self.f2_power, 20) * math.cos(self.an),
+                    450 + max(self.f2_power, 20) * math.sin(self.an)
+                    )
+        canv.coords(self.id_line, 20, 450,
+                    20 + 1000 * math.cos(self.an),
+                    450 + 1000 * math.sin(self.an)
+                    )
+
+    def power_up(self):
+        if self.f2_on:
+            if self.f2_power < 150:
+                self.f2_power += 1
+            canv.itemconfig(self.id, fill='red')
         else:
             canv.itemconfig(self.id, fill='black')
 
@@ -168,12 +195,24 @@ class target():
 
     def move(self):
         if self.live == 1:
-            if (self.x + self.r >= 800) or (self.x - self.r <= 400):
+
+            if self.x + self.r + self.vx >= 800:
+                self.x = 1600 - self.x - 2 * self.r - self.vx
                 self.vx = - self.vx
-            if (self.y + self.r >= 600) or (self.y - self.r <= 0):
+            elif self.x - self.r + self.vx <= 400:
+                self.x = 800 - self.x + 2 * self.r - self.vx
+                self.vx = - self.vx
+            else:
+                self.x += self.vx
+            if self.y + self.r + self.vy >= 550:
+                self.y = 1100 - self.y - 2 * self.r - self.vy
                 self.vy = - self.vy
-            self.x += self.vx
-            self.y -= self.vy
+            elif self.y - self.r + self.vy <= 0:
+                self.y = - self.y + 2 * self.r - self.vy
+                self.vy = - self.vy
+            else:
+                self.y += self.vy
+
             self.set_coords()
 
     def set_coords(self):
@@ -203,11 +242,15 @@ class points():
 
 
 n = 3  # количесвто целей
+easy = True  # Режим игры
 targets = []
 for i in range(n):
     targets.append(target(i))
 screen1 = canv.create_text(400, 300, text='', font='28')
-g1 = gun()
+if easy:
+    g1 = mega_gun()
+else:
+    g1 = gun()
 bullet = 0
 balls = []
 points = points()
